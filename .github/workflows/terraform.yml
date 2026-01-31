@@ -20,9 +20,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout repository
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2️⃣ Azure login using OIDC
       - name: Azure login (OIDC)
         uses: azure/login@v2
         with:
@@ -30,11 +32,13 @@ jobs:
           tenant-id: ${{ vars.AZURE_TENANT_ID }}
           subscription-id: ${{ vars.AZURE_MANAGEMENT_SUBSCRIPTION_ID }}
 
+      # 3️⃣ Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.7.5
 
+      # 4️⃣ Configure Terraform plugin cache
       - name: Configure Terraform plugin cache
         run: |
           echo 'plugin_cache_dir = "'$HOME'/.terraform.d/plugin-cache"' > ~/.terraformrc
@@ -47,27 +51,27 @@ jobs:
           key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
           restore-keys: terraform-${{ runner.os }}-
 
-      # 🔎 Optional but VERY useful for sanity checks
+      # 🔎 Debug (safe to keep or remove later)
       - name: Debug workspace
         run: |
           pwd
           ls -la
 
+      # 5️⃣ Terraform Init
       - name: Terraform Init
-        working-directory: root
         run: terraform init -upgrade
 
+      # 6️⃣ Terraform Fmt
       - name: Terraform Fmt
-        working-directory: root
         run: terraform fmt -check -recursive
 
+      # 7️⃣ Terraform Validate
       - name: Terraform Validate
-        working-directory: root
         run: terraform validate
 
+      # 8️⃣ Terraform Plan (PRs only)
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
-        working-directory: root
         run: |
           terraform plan -no-color \
             -var="tenant_id=${{ vars.AZURE_TENANT_ID }}" \
@@ -86,12 +90,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tfplan
-          path: root/tfplan
+          path: tfplan
           retention-days: 7
 
+      # 9️⃣ Terraform Apply (push to main only)
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: root
         run: |
           terraform apply -auto-approve \
             -var="tenant_id=${{ vars.AZURE_TENANT_ID }}" \
