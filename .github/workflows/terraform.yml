@@ -52,23 +52,23 @@ jobs:
 
       # 5) Terraform Init (remote state in Storage via AAD)
       - name: Terraform Init
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: ${{ env.WORKING_DIR }}/root
         run: terraform init -upgrade
 
       # 6) Terraform Fmt Check
       - name: Terraform Fmt
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: ${{ env.WORKING_DIR }}/root
         run: terraform fmt -check -recursive
 
       # 7) Terraform Validate
       - name: Terraform Validate
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: ${{ env.WORKING_DIR }}/root
         run: terraform validate
 
       # 8) Terraform Plan on PRs (artifact the plan output)
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: ${{ env.WORKING_DIR }}/root
         run: |
           terraform plan -no-color \
             -var="tenant_id=${{ vars.AZURE_TENANT_ID }}" \
@@ -94,7 +94,7 @@ jobs:
       # 9) Terraform Apply on pushes to main
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: ${{ env.WORKING_DIR }}
+        working-directory: ${{ env.WORKING_DIR }}/root
         run: |
           terraform apply -auto-approve \
             -var="tenant_id=${{ vars.AZURE_TENANT_ID }}" \
