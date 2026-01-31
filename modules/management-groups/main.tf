@@ -1,5 +1,5 @@
 
-/ modules/management-groups/main.tf
+// modules/management-groups/main.tf
 module "mg" {
   source = "Azure/avm-res-management-managementgroup/azurerm"
 
