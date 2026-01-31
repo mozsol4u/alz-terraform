@@ -14,4 +14,7 @@ variable "tfstate_sa"        { type = string }
 variable "tfstate_container" { type = string }
 
 // Naming seed (optional)
-variable "prefix" { type = string default = "alz" }
+variable "prefix"{ 
+    type = string 
+    default = "alz" 
+    }

@@ -3,4 +3,7 @@
 variable "name"           { type = string }
 variable "location"       { type = string }
 variable "resource_group" { type = string }
-variable "sku"            { type = string default = "PerGB2018" }
+variable "sku"            { 
+    type = string 
+    default = "PerGB2018" 
+    }
