@@ -1,7 +1,7 @@
 
 // 1) Management Groups (all inputs defined in the wrapper)
 module "management_groups" {
-  source    = "../modules/management-groups"
+  source    = "./modules/management-groups"
   tenant_id = local.tenant_id
 
   root_management_group_name = "mg-nist"
@@ -13,7 +13,7 @@ module "management_groups" {
 
 // 2) Log Analytics – Management subscription
 module "law_management" {
-  source    = "../modules/log-analytics"
+  source    = "./modules/log-analytics"
   providers = { azurerm = azurerm }
 
   name           = "${local.prefix}-law-mgmt"
@@ -24,7 +24,7 @@ module "law_management" {
 
 // 3) Hub VNet – Connectivity subscription
 module "hub_vnet" {
-  source    = "../modules/virtual-network"
+  source    = "./modules/virtual-network"
   providers = { azurerm = azurerm.connectivity }
 
   name           = "${local.prefix}-vnet-hub"
@@ -40,7 +40,7 @@ module "hub_vnet" {
 
 // 4) Key Vault in Connectivity (private endpoint to snet-paas)
 module "kv_connectivity" {
-  source    = "../modules/key-vault"
+  source    = "./modules/key-vault"
   providers = { azurerm = azurerm.connectivity }
 
   name                       = "${local.prefix}-kv-conn"
