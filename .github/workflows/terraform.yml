@@ -6,7 +6,7 @@ on:
   pull_request:
     branches: [ "main" ]
 
-# Required for GitHub → Azure OIDC token exchange
+# Required for GitHub → Azure OIDC token exchange and repo checkout
 permissions:
   id-token: write
   contents: read
@@ -14,7 +14,7 @@ permissions:
 env:
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
-  WORKING_DIR: root
+  WORKING_DIR: ${{ github.workspace }}/root
 
 jobs:
   terraform:
@@ -25,7 +25,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2) Authenticate to Azure with OIDC (no secrets)
+      # 2) Authenticate to Azure with OIDC (no client secret)
       #    Uses the management subscription as default ARM context
       - name: Azure login (OIDC)
         uses: azure/login@v2
@@ -40,35 +40,40 @@ jobs:
         with:
           terraform_version: 1.7.5
 
-      # 4) Optional: Cache .terraform providers/plugins to speed up runs
+      # 4) Enable Terraform plugin cache and cache it across runs
+      - name: Configure Terraform plugin cache
+        run: |
+          echo 'plugin_cache_dir = "'$HOME'/.terraform.d/plugin-cache"' > ~/.terraformrc
+          mkdir -p "$HOME/.terraform.d/plugin-cache"
+
       - name: Cache Terraform plugins
         uses: actions/cache@v4
         with:
           path: |
-            ${{ env.WORKING_DIR }}/.terraform
-            ~/.terraform.d/plugin-cache
-          key: terraform-${{ runner.os }}-${{ hashFiles('**/*.tf', '**/*.hcl') }}
-          restore-keys: terraform-${{ runner.os }}-
+            $HOME/.terraform.d/plugin-cache
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+          restore-keys: |
+            terraform-${{ runner.os }}-
 
-      # 5) Terraform Init (remote state in Storage via AAD)
+      # 5) Terraform Init (remote state uses AAD auth)
       - name: Terraform Init
-        working-directory: ${{ env.WORKING_DIR }}/root
+        working-directory: ${{ env.WORKING_DIR }}
         run: terraform init -upgrade
 
-      # 6) Terraform Fmt Check
+      # 6) Terraform Fmt
       - name: Terraform Fmt
-        working-directory: ${{ env.WORKING_DIR }}/root
+        working-directory: ${{ env.WORKING_DIR }}
         run: terraform fmt -check -recursive
 
       # 7) Terraform Validate
       - name: Terraform Validate
-        working-directory: ${{ env.WORKING_DIR }}/root
+        working-directory: ${{ env.WORKING_DIR }}
         run: terraform validate
 
-      # 8) Terraform Plan on PRs (artifact the plan output)
+      # 8) Terraform Plan on PRs (store plan as artifact)
       - name: Terraform Plan
         if: github.event_name == 'pull_request'
-        working-directory: ${{ env.WORKING_DIR }}/root
+        working-directory: ${{ env.WORKING_DIR }}
         run: |
           terraform plan -no-color \
             -var="tenant_id=${{ vars.AZURE_TENANT_ID }}" \
@@ -91,10 +96,10 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      # 9) Terraform Apply on pushes to main
+      # 9) Terraform Apply on push to main
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: ${{ env.WORKING_DIR }}/root
+        working-directory: ${{ env.WORKING_DIR }}
         run: |
           terraform apply -auto-approve \
             -var="tenant_id=${{ vars.AZURE_TENANT_ID }}" \
